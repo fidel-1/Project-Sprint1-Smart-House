@@ -1,0 +1,76 @@
+@startuml
+title Device Controller - Code Diagram
+
+package "Device Controller" {
+
+  class Routes {
+    - router: Router
+    + registerRoutes(): void
+  }
+
+  class Controller {
+    - service: Service
+    + getDevice(deviceId: string): DeviceDto
+    + updateDevice(deviceId: string, payload: UpdateDeviceDto): DeviceDto
+    + sendCommand(deviceId: string, cmd: CommandDto): CommandResultDto
+  }
+
+  class Service {
+    - registryClient: RegistryClient
+    - controlClient: ControlClient
+    + getDeviceMeta(deviceId: string): DeviceMeta
+    + updateDeviceMeta(deviceId: string, payload: UpdateDeviceDto): DeviceMeta
+    + dispatchCommand(deviceId: string, cmd: CommandDto): CommandResult
+  }
+}
+
+class "API Gateway / BFF" as Gateway {
+  + forwardRequest(path: string, body: Json): Json
+}
+
+class "Device Registry" as Registry {
+  + getDevice(deviceId: string): DeviceMeta
+  + updateDevice(deviceId: string, payload: UpdateDeviceDto): DeviceMeta
+}
+
+class "Device Control" as Control {
+  + sendCommand(deviceId: string, cmd: CommandDto): CommandResult
+}
+
+' --- DTOs (упрощённо) ---
+class DeviceDto {
+  + id: string
+  + houseId: string
+  + type: string
+  + status: string
+}
+
+class UpdateDeviceDto {
+  + name: string
+  + room: string
+  + enabled: bool
+}
+
+class CommandDto {
+  + type: string
+  + payload: Json
+}
+
+class CommandResultDto {
+  + commandId: string
+  + status: string
+}
+
+' --- Relationships ---
+Gateway --> Routes : HTTP
+Routes --> Controller : calls
+Controller --> Service : uses
+Service --> Registry : gRPC/REST
+Service --> Control : gRPC/REST
+
+Controller ..> DeviceDto
+Controller ..> UpdateDeviceDto
+Controller ..> CommandDto
+Controller ..> CommandResultDto
+
+@enduml

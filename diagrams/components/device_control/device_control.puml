@@ -1,0 +1,34 @@
+@startuml C4_Component_DeviceControl
+!includeurl https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+title Component diagram for Device Control
+
+Container(web_app, "Web Application", "Node.js")
+Container(automation_rules, "Automation / Rules", "Drools")
+Container(device_registry, "Device Registry", "Go")
+System_Ext(devices, "Smart Devices", "MQTT, Zigbee, etc.")
+
+Container_Boundary(c1, "Device Control") {
+    Component(api, "Command API", "Go, Gin", "Receives commands to control devices")
+    Component(command_service, "Command Service", "Go", "Translates generic commands into device-specific instructions")
+    Component(state_manager, "State Manager", "Go, Redis", "Tracks the current state of all devices")
+    Component(protocol_adapter, "Protocol Adapter Interface", "Go", "Defines a common interface for communicating with devices")
+    Component(mqtt_adapter, "MQTT Adapter", "Go", "Implements communication with MQTT-based devices")
+    Component(zwave_adapter, "Z-Wave Adapter", "Go", "Implements communication with Z-Wave devices")
+}
+
+Rel(web_app, api, "Sends commands via", "JSON/HTTPS")
+Rel(automation_rules, api, "Sends commands via", "gRPC/Events")
+
+Rel(api, command_service, "Uses")
+Rel(command_service, state_manager, "Updates/Reads state from")
+Rel(command_service, device_registry, "Gets device info from", "gRPC/REST")
+Rel(command_service, protocol_adapter, "Uses")
+
+protocol_adapter <|-- mqtt_adapter
+protocol_adapter <|-- zwave_adapter
+
+Rel(mqtt_adapter, devices, "Sends commands to", "MQTT")
+Rel(zwave_adapter, devices, "Sends commands to", "Z-Wave Protocol")
+
+@enduml

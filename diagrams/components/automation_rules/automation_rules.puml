@@ -1,0 +1,34 @@
+@startuml C4_Component_AutomationRules
+!includeurl https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+title Component diagram for Automation / Rules
+
+Container(web_app, "Web Application", "Node.js")
+Container(telemetry_monitoring, "Telemetry & Monitoring", "Kafka, ...")
+Container(device_control, "Device Control", "Go")
+ContainerDb(db, "PostgreSQL", "Relational Database")
+
+
+Container_Boundary(c1, "Automation / Rules") {
+    Component(api, "Rules API", "Java, Spring Boot", "Предоставляет CRUD-операции для правил автоматизации")
+    Component(rules_engine, "Rules Engine", "Drools", "Выполняет правила на основе событий или расписаний")
+    Component(event_listener, "Event Listener", "Java, Kafka Consumer", "Прослушивает события телеметрии для запуска правил")
+    Component(scheduler, "Scheduler", "Java, Quartz", "Выполняет правила по расписанию")
+    Component(action_executor, "Action Executor", "Java", "Отправляет команды в сервис управления устройствами")
+    Component(rules_repo, "Rules Repository", "Java, JPA", "Хранит и извлекает правила из БД")
+}
+
+Rel(web_app, api, "Manages rules via", "JSON/HTTPS")
+Rel(api, rules_repo, "Uses")
+
+Rel(telemetry_monitoring, event_listener, "Sends events to", "Kafka Topic")
+Rel(event_listener, rules_engine, "Triggers")
+Rel(scheduler, rules_engine, "Triggers")
+
+Rel(rules_engine, rules_repo, "Loads rules from")
+Rel(rules_engine, action_executor, "Instructs to execute actions")
+
+Rel(action_executor, device_control, "Sends commands to", "gRPC/REST")
+Rel(rules_repo, db, "Reads/Writes", "JDBC")
+
+@enduml

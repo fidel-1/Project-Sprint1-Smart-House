@@ -1,0 +1,6 @@
+@startuml
+!includeurl https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Context.puml
+Person(user, "User", "User")
+System(warmhouse, "WarmHouse", "SaaS platform")
+Rel(user, warmhouse, "Uses", "HTTPS")
+@enduml

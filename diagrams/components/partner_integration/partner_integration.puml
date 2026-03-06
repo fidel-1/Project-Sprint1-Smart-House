@@ -1,0 +1,32 @@
+@startuml C4_Component_PartnerIntegration
+!includeurl https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+title Component diagram for Partner Integration
+
+System_Ext(partner_systems, "Partner Cloud Systems", "e.g., Philips Hue Cloud, Tuya Cloud")
+Container(device_registry, "Device Registry", "Go")
+Container(device_control, "Device Control", "Go")
+Container(telemetry_monitoring, "Telemetry & Monitoring", "Kafka, ...")
+
+Container_Boundary(c1, "Partner Integration") {
+    Component(integration_manager, "Integration Manager", "Java, Spring Boot", "Orchestrates the lifecycle of partner integrations")
+    Component(adapter_interface, "Partner Adapter Interface", "Java", "Defines a common contract for all partner adapters")
+    Component(hue_adapter, "Philips Hue Adapter", "Java", "Handles communication with the Philips Hue API")
+    Component(tuya_adapter, "Tuya Adapter", "Java", "Handles communication with the Tuya Cloud API")
+    Component(data_mapper, "Data Mapper", "Java", "Translates between partner data models and the internal system's models")
+}
+
+adapter_interface <|-- hue_adapter
+adapter_interface <|-- tuya_adapter
+
+Rel(integration_manager, adapter_interface, "Uses")
+Rel(hue_adapter, partner_systems, "Connects to", "REST/HTTPS")
+Rel(tuya_adapter, partner_systems, "Connects to", "REST/HTTPS")
+
+Rel(adapter_interface, data_mapper, "Uses")
+
+Rel(data_mapper, device_registry, "Registers devices in", "gRPC/REST")
+Rel(data_mapper, device_control, "Forwards commands to", "gRPC/REST")
+Rel(data_mapper, telemetry_monitoring, "Pushes telemetry to", "Kafka")
+
+@enduml
