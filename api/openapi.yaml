@@ -1,0 +1,263 @@
+openapi: 3.0.3
+info:
+  title: Smart Home System API
+  description: |
+    Гибридная API для системы умного дома "WarmHouse".
+    - **REST API** для синхронных операций (управление, получение данных).
+    - **AsyncAPI** для асинхронных событий (телеметрия, алерты).
+    Данная документация описывает только REST API.
+  version: 1.0.0
+
+paths:
+  /devices:
+    get:
+      tags:
+        - Реестр устройств
+      summary: Получить список устройств
+      description: Возвращает массив всех зарегистрированных в системе устройств.
+      responses:
+        '200':
+          description: Успешный ответ со списком устройств.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Device'
+              example:
+                - id: "123e4567-e89b-12d3-a456-426614174000"
+                  house_id: "a1b2c3d4-e5f6-a7b8-c9d0-e1f2a3b4c5d6"
+                  type_id: "b1c2d3e4-f5a6-b7c8-d9e0-f1a2b3c4d5e6"
+                  serial_number: "SN-987654321"
+                  name: "Термостат в гостиной"
+                  location: "Гостиная"
+                  status: "online"
+                  settings:
+                    min_temp: 18
+                    max_temp: 25
+                  created_at: "2023-10-27T10:00:00Z"
+        '500':
+          description: Внутренняя ошибка сервера.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    post:
+      tags:
+        - Реестр устройств
+      summary: Зарегистрировать новое устройство
+      description: Добавляет новое устройство в систему и возвращает его полную модель.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NewDevice'
+            example:
+              house_id: "a1b2c3d4-e5f6-a7b8-c9d0-e1f2a3b4c5d6"
+              type_id: "b1c2d3e4-f5a6-b7c8-d9e0-f1a2b3c4d5e6"
+              serial_number: "SN-1122334455"
+              name: "Датчик движения в коридоре"
+              location: "Коридор"
+      responses:
+        '201':
+          description: Устройство успешно создано.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Device'
+        '400':
+          description: Некорректные входные данные.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Внутренняя ошибка сервера.
+
+  /devices/{deviceId}:
+    get:
+      tags:
+        - Реестр устройств
+      summary: Получить устройство по ID
+      description: Возвращает детальную информацию о конкретном устройстве по его уникальному идентификатору.
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          description: Идентификатор устройства.
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Успешный ответ с данными устройства.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Device'
+        '404':
+          description: Устройство не найдено.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Внутренняя ошибка сервера.
+
+  /devices/{deviceId}/commands:
+    post:
+      tags:
+        - Управление устройствами
+      summary: Отправить команду устройству
+      description: Отправляет команду на выполнение конкретному устройству. Команда принимается в обработку асинхронно.
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          description: Идентификатор устройства.
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Command'
+            example:
+              type: "SET_TEMPERATURE"
+              payload:
+                value: 22.5
+      responses:
+        '202':
+          description: Команда принята к исполнению.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommandResponse'
+              example:
+                commandId: "c4d5e6f7-a1b2-c3d4-e5f6-a7b8c9d0e1f2"
+                status: "ACCEPTED"
+                timestamp: "2023-10-27T11:30:00Z"
+        '400':
+          description: Некорректный формат команды.
+        '404':
+          description: Устройство не найдено.
+        '500':
+          description: Внутренняя ошибка сервера.
+
+components:
+  schemas:
+    Device:
+      type: object
+      description: Полная модель устройства в системе.
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Уникальный идентификатор устройства.
+        house_id:
+          type: string
+          format: uuid
+          description: Идентификатор дома, к которому привязано устройство.
+        type_id:
+          type: string
+          format: uuid
+          description: Идентификатор типа устройства.
+        serial_number:
+          type: string
+          description: Серийный номер устройства.
+        name:
+          type: string
+          description: Пользовательское имя устройства.
+        location:
+          type: string
+          description: Местоположение устройства в доме.
+        status:
+          type: string
+          description: Текущий статус устройства.
+          enum: [online, offline, active, inactive, error]
+        settings:
+          type: object
+          description: Специфичные настройки устройства в формате JSON.
+        created_at:
+          type: string
+          format: date-time
+          description: Дата и время регистрации устройства.
+
+    NewDevice:
+      type: object
+      description: Модель для регистрации нового устройства.
+      required:
+        - house_id
+        - type_id
+        - serial_number
+        - name
+      properties:
+        house_id:
+          type: string
+          format: uuid
+          description: Идентификатор дома.
+        type_id:
+          type: string
+          format: uuid
+          description: Идентификатор типа устройства.
+        serial_number:
+          type: string
+          description: Серийный номер устройства.
+        name:
+          type: string
+          description: Пользовательское имя устройства.
+        location:
+          type: string
+          description: Местоположение устройства в доме.
+        settings:
+          type: object
+          description: Начальные настройки устройства.
+
+    Command:
+      type: object
+      description: Модель команды для отправки устройству.
+      required:
+        - type
+      properties:
+        type:
+          type: string
+          description: Тип отправляемой команды (например, 'TURN_ON', 'SET_TEMPERATURE').
+        payload:
+          type: object
+          description: Дополнительные параметры для команды.
+          additionalProperties: true
+
+    CommandResponse:
+      type: object
+      description: Ответ на отправку команды.
+      properties:
+        commandId:
+          type: string
+          format: uuid
+          description: Идентификатор отправленной команды для отслеживания.
+        status:
+          type: string
+          description: Статус обработки команды.
+          enum: [ACCEPTED, FAILED, PENDING]
+        timestamp:
+          type: string
+          format: date-time
+          description: Время отправки команды.
+
+    Error:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: integer
+          format: int32
+          description: Код ошибки.
+        message:
+          type: string
+          description: Текстовое описание ошибки.

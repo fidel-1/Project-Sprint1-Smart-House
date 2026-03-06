@@ -1,0 +1,272 @@
+asyncapi: '2.6.0'
+info:
+  title: Smart Home System AsyncAPI
+  version: 1.0.0
+  description: |
+    Асинхронный API для системы умного дома "WarmHouse".
+    Описывает событийное взаимодействие между микросервисами через брокер сообщений.
+
+servers:
+  production:
+    url: kafka:9092
+    protocol: kafka
+    description: Основной брокер сообщений Kafka.
+
+channels:
+  telemetry.received:
+    description: Канал для получения телеметрии от устройств.
+    publish:
+      summary: Публикация телеметрии устройством или шлюзом.
+      operationId: publishTelemetry
+      message:
+        $ref: '#/components/messages/TelemetryEvent'
+    subscribe:
+      summary: Подписка на телеметрию для мониторинга и обработки.
+      operationId: subscribeTelemetry
+      message:
+        $ref: '#/components/messages/TelemetryEvent'
+
+  device.command.sent:
+    description: Канал отправки команд устройствам.
+    publish:
+      summary: Отправка команды сервисом управления.
+      operationId: publishCommand
+      message:
+        $ref: '#/components/messages/DeviceCommandEvent'
+    subscribe:
+      summary: Получение команды адаптером или устройством.
+      operationId: subscribeCommand
+      message:
+        $ref: '#/components/messages/DeviceCommandEvent'
+
+  device.state.updated:
+    description: Канал обновлений состояния устройств.
+    publish:
+      summary: Устройство сообщает об изменении своего состояния.
+      operationId: publishDeviceState
+      message:
+        $ref: '#/components/messages/DeviceStateEvent'
+    subscribe:
+      summary: Сервисы обновляют локальные кэши состояний.
+      operationId: subscribeDeviceState
+      message:
+        $ref: '#/components/messages/DeviceStateEvent'
+
+  automation.rule.triggered:
+    description: Канал событий срабатывания правил автоматизации.
+    publish:
+      summary: Движок правил публикует событие срабатывания.
+      operationId: publishAutomationTrigger
+      message:
+        $ref: '#/components/messages/AutomationTriggerEvent'
+    subscribe:
+      summary: Исполнители действий реагируют на правила.
+      operationId: subscribeAutomationTrigger
+      message:
+        $ref: '#/components/messages/AutomationTriggerEvent'
+
+  alert.created:
+    description: Канал для алертов и уведомлений.
+    publish:
+      summary: Сервис мониторинга создает алерт.
+      operationId: publishAlert
+      message:
+        $ref: '#/components/messages/AlertEvent'
+    subscribe:
+      summary: Сервис уведомлений отправляет сообщения пользователям.
+      operationId: subscribeAlert
+      message:
+        $ref: '#/components/messages/AlertEvent'
+
+components:
+  messages:
+    TelemetryEvent:
+      name: TelemetryEvent
+      title: Событие телеметрии
+      summary: Данные измерений от датчиков.
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/TelemetryEvent'
+      examples:
+        - payload:
+            deviceId: "123e4567-e89b-12d3-a456-426614174000"
+            timestamp: "2023-10-27T10:00:00Z"
+            type: "temperature"
+            value: 22.5
+            unit: "celsius"
+
+    DeviceCommandEvent:
+      name: DeviceCommandEvent
+      title: Команда устройству
+      summary: Команда на изменение состояния или действия.
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/DeviceCommandEvent'
+      examples:
+        - payload:
+            commandId: "c4d5e6f7-a1b2-c3d4-e5f6-a7b8c9d0e1f2"
+            deviceId: "123e4567-e89b-12d3-a456-426614174000"
+            type: "SET_TEMPERATURE"
+            payload:
+              value: 24.0
+            timestamp: "2023-10-27T10:05:00Z"
+
+    DeviceStateEvent:
+      name: DeviceStateEvent
+      title: Изменение состояния устройства
+      summary: Новое состояние устройства после команды или ручного изменения.
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/DeviceStateEvent'
+      examples:
+        - payload:
+            deviceId: "123e4567-e89b-12d3-a456-426614174000"
+            status: "active"
+            state:
+              temperature: 24.0
+              mode: "heating"
+            timestamp: "2023-10-27T10:06:00Z"
+
+    AutomationTriggerEvent:
+      name: AutomationTriggerEvent
+      title: Срабатывание автоматизации
+      summary: Информация о сработавшем правиле.
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/AutomationTriggerEvent'
+      examples:
+        - payload:
+            ruleId: "rule-123"
+            ruleName: "Turn on heating when cold"
+            triggeredAt: "2023-10-27T10:00:00Z"
+            actions:
+              - targetDeviceId: "123e4567-e89b-12d3-a456-426614174000"
+                command: "TURN_ON"
+
+    AlertEvent:
+      name: AlertEvent
+      title: Алерт
+      summary: Критическое событие или уведомление.
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/AlertEvent'
+      examples:
+        - payload:
+            alertId: "alert-999"
+            severity: "critical"
+            message: "Temperature too high!"
+            source: "telemetry-monitor"
+            timestamp: "2023-10-27T12:00:00Z"
+
+  schemas:
+    TelemetryEvent:
+      type: object
+      properties:
+        deviceId:
+          type: string
+          format: uuid
+          description: Идентификатор устройства.
+        timestamp:
+          type: string
+          format: date-time
+          description: Время измерения.
+        type:
+          type: string
+          description: Тип измерения (temperature, humidity, etc).
+        value:
+          type: number
+          description: Значение измерения.
+        unit:
+          type: string
+          description: Единица измерения.
+      required: [deviceId, timestamp, type, value]
+
+    DeviceCommandEvent:
+      type: object
+      properties:
+        commandId:
+          type: string
+          format: uuid
+          description: Уникальный ID команды.
+        deviceId:
+          type: string
+          format: uuid
+          description: ID целевого устройства.
+        type:
+          type: string
+          description: Тип команды.
+        payload:
+          type: object
+          description: Параметры команды.
+        timestamp:
+          type: string
+          format: date-time
+          description: Время создания команды.
+      required: [commandId, deviceId, type, timestamp]
+
+    DeviceStateEvent:
+      type: object
+      properties:
+        deviceId:
+          type: string
+          format: uuid
+          description: ID устройства.
+        status:
+          type: string
+          enum: [online, offline, active, error]
+          description: Общий статус подключения.
+        state:
+          type: object
+          description: Текущее состояние атрибутов устройства.
+        timestamp:
+          type: string
+          format: date-time
+          description: Время обновления.
+      required: [deviceId, status, timestamp]
+
+    AutomationTriggerEvent:
+      type: object
+      properties:
+        ruleId:
+          type: string
+          description: ID сработавшего правила.
+        ruleName:
+          type: string
+          description: Название правила.
+        triggeredAt:
+          type: string
+          format: date-time
+          description: Время срабатывания.
+        actions:
+          type: array
+          items:
+            type: object
+            properties:
+              targetDeviceId:
+                type: string
+                format: uuid
+              command:
+                type: string
+      required: [ruleId, triggeredAt]
+
+    AlertEvent:
+      type: object
+      properties:
+        alertId:
+          type: string
+          description: ID алерта.
+        severity:
+          type: string
+          enum: [info, warning, critical]
+          description: Уровень важности.
+        message:
+          type: string
+          description: Текст сообщения.
+        source:
+          type: string
+          description: Источник события.
+        timestamp:
+          type: string
+          format: date-time
+          description: Время создания.
+      required: [alertId, severity, message, timestamp]

@@ -1,0 +1,69 @@
+@startuml ER_Diagram
+hide circle
+skinparam linetype ortho
+
+entity "User (Пользователь)" as user {
+  *id : UUID <<PK>>
+  --
+  username : VARCHAR(255)
+  email : VARCHAR(255)
+  password_hash : VARCHAR(255)
+  created_at : TIMESTAMP
+}
+
+entity "House (Дом)" as house {
+  *id : UUID <<PK>>
+  --
+  user_id : UUID <<FK>>
+  name : VARCHAR(255)
+  address : TEXT
+  created_at : TIMESTAMP
+}
+
+entity "Module (Модуль системы)" as module {
+  *id : UUID <<PK>>
+  --
+  name : VARCHAR(100)
+  description : TEXT
+  price : DECIMAL
+}
+
+entity "DeviceType (Тип устройства)" as device_type {
+  *id : UUID <<PK>>
+  --
+  module_id : UUID <<FK>>
+  name : VARCHAR(100)
+  description : TEXT
+  protocol : VARCHAR(50)
+}
+
+entity "Device (Устройство)" as device {
+  *id : UUID <<PK>>
+  --
+  house_id : UUID <<FK>>
+  type_id : UUID <<FK>>
+  serial_number : VARCHAR(100)
+  name : VARCHAR(255)
+  location : VARCHAR(100)
+  status : VARCHAR(50)
+  settings : JSONB
+  created_at : TIMESTAMP
+}
+
+entity "TelemetryData (Телеметрия)" as telemetry {
+  *id : UUID <<PK>>
+  --
+  device_id : UUID <<FK>>
+  timestamp : TIMESTAMP
+  value : DOUBLE PRECISION
+  data : JSONB
+}
+
+' Связи между сущностями
+user ||..o{ house : "Владеет (1:N)"
+house ||..o{ device : "Содержит (1:N)"
+module ||..o{ device_type : "Включает (1:N)"
+device_type ||..o{ device : "Определяет (1:N)"
+device ||..o{ telemetry : "Генерирует (1:N)"
+
+@enduml

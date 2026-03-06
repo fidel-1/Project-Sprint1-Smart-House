@@ -1,0 +1,29 @@
+@startuml C4_Component_TelemetryMonitoring
+!includeurl https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+title Диаграмма компонентов для "Телеметрия и Мониторинг"
+
+Container(automation_rules, "Автоматизация / Правила", "Drools")
+Container(reporting_module, "Модуль отчетов", "Python")
+ContainerDb(db, "Cassandra", "NoSQL БД (Time Series)")
+System_Ext(devices, "Умные устройства", "Датчики, сенсоры")
+
+Container_Boundary(c1, "Телеметрия и Мониторинг") {
+    Component(ingestion, "Сервис приема данных", "Kafka/MQTT Broker", "Принимает входящий поток телеметрии от устройств.")
+    Component(processor, "Обработчик потока", "Apache Spark", "Анализирует данные, выявляет аномалии, агрегирует.")
+    Component(writer, "Сервис записи", "Java/Go", "Сохраняет обработанные данные в базу.")
+    Component(alerting, "Сервис алертинга", "Go", "Генерирует уведомления при превышении порогов.")
+    Component(reader_api, "API чтения", "Go/Gin", "Предоставляет доступ к историческим данным.")
+}
+
+Rel(devices, ingestion, "Отправляет телеметрию", "MQTT/HTTP")
+Rel(ingestion, processor, "Передает сообщения", "Kafka Topic")
+Rel(processor, writer, "Передает данные для записи")
+Rel(processor, alerting, "Передает события для проверки")
+Rel(writer, db, "Сохраняет", "CQL")
+
+Rel(automation_rules, processor, "Получает события", "Kafka")
+Rel(reporting_module, reader_api, "Запрашивает историю", "HTTP/JSON")
+Rel(reader_api, db, "Читает данные", "CQL")
+
+@enduml

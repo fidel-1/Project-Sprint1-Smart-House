@@ -1,0 +1,25 @@
+@startuml C4_Component_ReportingModule
+!includeurl https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+title Диаграмма компонентов для "Модуль отчетов"
+
+Container(web_app, "Веб-приложение", "Node.js")
+Container(telemetry_monitoring, "Телеметрия и Мониторинг", "Kafka, Spark")
+ContainerDb(relational_db, "PostgreSQL", "Реляционная БД")
+
+Container_Boundary(c1, "Модуль отчетов") {
+    Component(api, "Report API", "Python, FastAPI", "API для запроса отчетов")
+    Component(report_service, "Сервис генерации", "Python", "Логика создания отчетов")
+    Component(data_aggregator, "Агрегатор данных", "Python, Pandas", "Сбор данных")
+    Component(exporter, "Экспортер", "Python", "Экспорт в PDF/CSV")
+}
+
+Rel(web_app, api, "Запрашивает отчеты", "JSON/HTTPS")
+Rel(api, report_service, "Использует")
+Rel(report_service, data_aggregator, "Использует")
+Rel(report_service, exporter, "Использует")
+
+Rel(data_aggregator, telemetry_monitoring, "Запрашивает данные", "API")
+Rel(data_aggregator, relational_db, "Запрашивает метаданные", "SQL")
+
+@enduml
